@@ -16,55 +16,48 @@ import {
   ExpandableChatFooter,
 } from "@/components/ui/expandable-chat"
 import { ChatMessageList } from "@/components/ui/chat-message-list"
+import { generateGeminiResponse } from "@/lib/gemini"
+
+interface Message {
+  id: string;
+  content: string;
+  role: "user" | "assistant";
+}
 
 export function ExpandableChatDemo() {
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      content: "Hello! How can I help you today?",
-      sender: "ai",
-    },
-    {
-      id: 2,
-      content: "I have a question about the component library.",
-      sender: "user",
-    },
-    {
-      id: 3,
-      content: "Sure! I'd be happy to help. What would you like to know?",
-      sender: "ai",
-    },
-  ])
-
+  const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
 
-  const handleSubmit = (e: FormEvent) => {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    if (!input.trim()) return
+    if (!input.trim() || isLoading) return
 
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: prev.length + 1,
-        content: input,
-        sender: "user",
-      },
-    ])
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      content: input,
+      role: "user",
+    }
+
+    setMessages(prev => [...prev, userMessage])
     setInput("")
     setIsLoading(true)
 
-    setTimeout(() => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: prev.length + 1,
-          content: "This is an AI response to your message.",
-          sender: "ai",
-        },
-      ])
+    try {
+      const response = await generateGeminiResponse(input)
+      
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        content: response,
+        role: "assistant",
+      }
+
+      setMessages(prev => [...prev, assistantMessage])
+    } catch (error) {
+      console.error("Failed to get AI response:", error)
+    } finally {
       setIsLoading(false)
-    }, 1000)
+    }
   }
 
   const handleAttachFile = () => {
@@ -94,19 +87,19 @@ export function ExpandableChatDemo() {
             {messages.map((message) => (
               <ChatBubble
                 key={message.id}
-                variant={message.sender === "user" ? "sent" : "received"}
+                variant={message.role === "user" ? "sent" : "received"}
               >
                 <ChatBubbleAvatar
                   className="h-8 w-8 shrink-0"
                   src={
-                    message.sender === "user"
+                    message.role === "user"
                       ? "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=64&h=64&q=80&crop=faces&fit=crop"
                       : "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=64&h=64&q=80&crop=faces&fit=crop"
                   }
-                  fallback={message.sender === "user" ? "US" : "AI"}
+                  fallback={message.role === "user" ? "You" : "AI"}
                 />
                 <ChatBubbleMessage
-                  variant={message.sender === "user" ? "sent" : "received"}
+                  variant={message.role === "user" ? "sent" : "received"}
                 >
                   {message.content}
                 </ChatBubbleMessage>
@@ -157,7 +150,7 @@ export function ExpandableChatDemo() {
                   <Mic className="size-4" />
                 </Button>
               </div>
-              <Button type="submit" size="sm" className="ml-auto gap-1.5">
+              <Button type="submit" size="sm" className="ml-auto gap-1.5" disabled={isLoading}>
                 Send Message
                 <CornerDownLeft className="size-3.5" />
               </Button>
