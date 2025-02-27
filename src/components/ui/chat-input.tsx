@@ -1,10 +1,10 @@
 "use client"
 
 import * as React from "react"
-import { Textarea } from "@/components/ui/textarea"
+import { Textarea } from "./textarea"
 import { cn } from "@/lib/utils"
 
-interface ChatInputProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {}
+type ChatInputProps = React.TextareaHTMLAttributes<HTMLTextAreaElement>
 
 const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
   ({ className, ...props }, ref) => (
